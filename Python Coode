@@ -1,0 +1,130 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+from IPython.display import HTML
+
+def maxSumWithOneDeletion_optimal(arr: list[int]) -> int:
+    """
+    Calculates max subarray sum with one deletion using an optimal DP approach.
+    """
+    if not arr:
+        return 0
+
+    one_deletion = 0
+    no_deletion = arr[0]
+    max_sum = arr[0]
+
+    for i in range(1, len(arr)):
+        num = arr[i]
+        
+        one_deletion_prev = one_deletion
+        one_deletion = max(one_deletion + num, no_deletion)
+        
+        no_deletion = max(no_deletion + num, num)
+
+        max_sum = max(max_sum, one_deletion, no_deletion)
+        
+    return max_sum
+
+def maxSumWithOneDeletion_intuitive(arr: list[int]) -> int:
+    """
+    Calculates max subarray sum with one deletion using forward/backward passes.
+    """
+    if not arr:
+        return 0
+    n = len(arr)
+    if n == 1:
+        return arr[0]
+
+    forward = [0] * n
+    forward[0] = arr[0]
+    current_max = arr[0]
+    max_so_far = arr[0]
+
+    for i in range(1, n):
+        current_max = max(arr[i], current_max + arr[i])
+        forward[i] = current_max
+        max_so_far = max(max_so_far, current_max)
+
+    backward = [0] * n
+    backward[n - 1] = arr[n - 1]
+    current_max = arr[n-1]
+
+    for i in range(n - 2, -1, -1):
+        current_max = max(arr[i], current_max + arr[i])
+        backward[i] = current_max
+
+    for i in range(1, n - 1):
+        max_so_far = max(max_so_far, forward[i - 1] + backward[i + 1])
+
+    return max_so_far
+
+def visualize_dp_transformation(arr: list[int]):
+    n = len(arr)
+    if n <= 1:
+        print("Array too small to visualize effectively.")
+        return
+
+    forward = [0] * n
+    forward[0] = arr[0]
+    for i in range(1, n):
+        forward[i] = max(arr[i], forward[i - 1] + arr[i])
+
+    backward = [0] * n
+    backward[n - 1] = arr[n - 1]
+    for i in range(n - 2, -1, -1):
+        backward[i] = max(arr[i], backward[i - 1] + arr[i])
+    
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
+    fig.suptitle('DP Array Transformation for Max Subarray Sum with One Deletion', fontsize=16)
+    x = np.arange(n)
+    
+    def update(frame):
+        ax1.clear()
+        ax2.clear()
+
+        ax1.bar(x, arr, color='gray', alpha=0.3, label='Original Array')
+        ax1.plot(x[:frame+1], forward[:frame+1], 'bo-', label='Forward DP (Max sum ending at i)', markersize=8)
+        if frame < n:
+            ax1.scatter(frame, forward[frame], color='red', s=150, zorder=5, label='Current Forward Calc')
+            formula = f"forward[{frame}] = max({arr[frame]}, {forward[frame-1] if frame > 0 else 0} + {arr[frame]}) = {forward[frame]}"
+            ax1.text(0.5, 0.9, formula, ha='center', va='center', transform=ax1.transAxes, fontsize=12, bbox=dict(facecolor='white', alpha=0.8))
+        ax1.set_title("Forward Pass (Kadane's from Left)")
+        ax1.set_xticks(x)
+        ax1.set_xticklabels(arr)
+        ax1.legend(loc='lower left')
+        ax1.grid(True, linestyle='--')
+
+        ax2.bar(x, arr, color='gray', alpha=0.3, label='Original Array')
+        ax2.plot(x[n-1-frame:], backward[n-1-frame:], 'go-', label='Backward DP (Max sum starting at i)', markersize=8)
+        if frame < n:
+            idx = n - 1 - frame
+            ax2.scatter(idx, backward[idx], color='red', s=150, zorder=5, label='Current Backward Calc')
+            formula = f"backward[{idx}] = max({arr[idx]}, {backward[idx+1] if idx < n-1 else 0} + {arr[idx]}) = {backward[idx]}"
+            ax2.text(0.5, 0.9, formula, ha='center', va='center', transform=ax2.transAxes, fontsize=12, bbox=dict(facecolor='white', alpha=0.8))
+        ax2.set_title("Backward Pass (Kadane's from Right)")
+        ax2.set_xticks(x)
+        ax2.set_xticklabels(arr)
+        ax2.legend(loc='lower left')
+        ax2.grid(True, linestyle='--')
+
+        plt.tight_layout(rect=[0, 0, 1, 0.96])
+
+    ani = animation.FuncAnimation(fig, update, frames=n, repeat=False, interval=1500)
+    plt.close()
+    return ani
+
+arr = [1, -2, 3, -4, 5, -1]
+
+print(f"--- Maximum Subarray Sum with One Deletion ---")
+print(f"Input Array: {arr}\n")
+
+result_optimal = maxSumWithOneDeletion_optimal(arr.copy())
+result_intuitive = maxSumWithOneDeletion_intuitive(arr.copy())
+
+print(f"Result (Optimal O(1) space): {result_optimal}")
+print(f"Result (Intuitive O(n) space): {result_intuitive}\n")
+
+print("Generating animation of the Forward/Backward DP process...")
+ani = visualize_dp_transformation(arr)
+display(HTML(ani.to_html5_video()))
